@@ -315,8 +315,9 @@ export default function AdminPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <div className="lg:col-span-6">
-              <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 p-8 mb-8">
+            {/* Create user (left) */}
+            <div className="lg:col-span-5">
+              <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 p-8">
                 <div className="flex items-center gap-2 mb-6 text-orange-primary font-bold text-sm uppercase tracking-widest">
                   <i data-lucide="user-plus" className="w-5 h-5"></i> Create User
                 </div>
@@ -377,70 +378,10 @@ export default function AdminPage() {
                   </button>
                 </form>
               </div>
-
-              <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-hidden">
-                <div className="p-6 border-b border-gray-50 flex justify-between items-center">
-                  <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                    <i data-lucide="users" className="w-4 h-4 text-orange-primary"></i> Users
-                  </h3>
-                  <div className="text-xs text-gray-400">{loading ? "Loading…" : `${users.length} total`}</div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead className="bg-gray-50/50">
-                      <tr>
-                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Username</th>
-                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Role</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {loading ? (
-                        <tr>
-                          <td className="px-6 py-6 text-sm text-gray-400" colSpan={3}>
-                            Loading users...
-                          </td>
-                        </tr>
-                      ) : users.length ? (
-                        users.map((u) => (
-                          <tr key={u.id} className="hover:bg-orange-50/30 transition-colors">
-                            <td className="px-6 py-5 text-sm font-semibold text-gray-900">{u.username}</td>
-                            <td className="px-6 py-5 text-sm text-gray-600">{u.email}</td>
-                            <td className="px-6 py-5 text-right">
-                              <div className="inline-flex items-center gap-2">
-                                <span
-                                  className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${badgeForRole(
-                                    u.isAdmin
-                                  )}`}
-                                >
-                                  {u.isAdmin ? "Admin" : "User"}
-                                </span>
-                                <button
-                                  type="button"
-                                  disabled={userActionId === u.id}
-                                  onClick={() => toggleAdmin(u)}
-                                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-                                >
-                                  {userActionId === u.id ? "..." : u.isAdmin ? "Demote" : "Promote"}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td className="px-6 py-8 text-sm text-gray-400" colSpan={3}>
-                            No users found.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
             </div>
 
-            <div className="lg:col-span-6">
+            {/* Documents (right) */}
+            <div className="lg:col-span-7">
               <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-hidden">
                 <div className="p-6 border-b border-gray-50 flex justify-between items-center">
                   <h3 className="font-bold text-gray-800 flex items-center gap-2">
@@ -448,8 +389,8 @@ export default function AdminPage() {
                   </h3>
                   <div className="text-xs text-gray-400">{loading ? "Loading…" : `${documents.length} total`}</div>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
+                <div className="overflow-auto max-h-[520px]">
+                  <table className="min-w-full text-left">
                     <thead className="bg-gray-50/50">
                       <tr>
                         <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">ID</th>
@@ -522,6 +463,70 @@ export default function AdminPage() {
                     Showing 50 of {documents.length}. Use GraphQL for full export.
                   </div>
                 ) : null}
+              </div>
+            </div>
+
+            {/* Users table (full width) */}
+            <div className="lg:col-span-12">
+              <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-hidden">
+                <div className="p-6 border-b border-gray-50 flex justify-between items-center">
+                  <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                    <i data-lucide="users" className="w-4 h-4 text-orange-primary"></i> Users
+                  </h3>
+                  <div className="text-xs text-gray-400">{loading ? "Loading…" : `${users.length} total`}</div>
+                </div>
+                <div className="overflow-auto max-h-[520px]">
+                  <table className="min-w-full text-left">
+                    <thead className="bg-gray-50/50">
+                      <tr>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Username</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Email</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Role</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {loading ? (
+                        <tr>
+                          <td className="px-6 py-6 text-sm text-gray-400" colSpan={3}>
+                            Loading users...
+                          </td>
+                        </tr>
+                      ) : users.length ? (
+                        users.map((u) => (
+                          <tr key={u.id} className="hover:bg-orange-50/30 transition-colors">
+                            <td className="px-6 py-5 text-sm font-semibold text-gray-900 whitespace-nowrap">{u.username}</td>
+                            <td className="px-6 py-5 text-sm text-gray-600 max-w-[520px] truncate">{u.email}</td>
+                            <td className="px-6 py-5 text-right">
+                              <div className="inline-flex items-center gap-2">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${badgeForRole(
+                                    u.isAdmin
+                                  )}`}
+                                >
+                                  {u.isAdmin ? "Admin" : "User"}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={userActionId === u.id}
+                                  onClick={() => toggleAdmin(u)}
+                                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                                >
+                                  {userActionId === u.id ? "..." : u.isAdmin ? "Demote" : "Promote"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td className="px-6 py-8 text-sm text-gray-400" colSpan={3}>
+                            No users found.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
