@@ -41,6 +41,7 @@ function categoryBadge(category: string) {
 
 function securityBadge(classification: string) {
   const cl = (classification || "internal").toLowerCase();
+  if (cl === "public") return { label: "Public", cls: "bg-blue-50 text-blue-600" };
   if (cl === "confidential") return { label: "Encrypted", cls: "bg-green-50 text-green-600" };
   if (cl === "restricted") return { label: "Restricted", cls: "bg-red-50 text-red-600" };
   return { label: "Internal", cls: "bg-orange-50 text-orange-600" };
@@ -94,7 +95,11 @@ export default function DashboardPage() {
 
   const visibleDocs = useMemo(() => {
     if (!me) return docs;
-    const base = showAll ? docs : docs.filter((d) => d.ownerId === me.id);
+    // UI-level visibility: show only user's docs by default.
+    // When "All" is enabled, include user's docs + public docs.
+    const base = showAll
+      ? docs.filter((d) => d.ownerId === me.id || String(d.classification || "").toLowerCase() === "public")
+      : docs.filter((d) => d.ownerId === me.id);
     const q = query.trim().toLowerCase();
     if (!q) return base;
     return base.filter((d) => {
@@ -277,7 +282,7 @@ export default function DashboardPage() {
                 onClick={() => setShowAll((v) => !v)}
                 type="button"
               >
-                <i data-lucide="filter" className="w-4 h-4"></i> {showAll ? "Mine" : "All"}
+                <i data-lucide="filter" className="w-4 h-4"></i> {showAll ? "Mine" : "All (Public)"}
               </button>
             </div>
           </div>
@@ -298,7 +303,7 @@ export default function DashboardPage() {
                     onClick={() => setShowAll(true)}
                     type="button"
                   >
-                    Show all files
+                    Show public files
                   </button>
                 </div>
                 <div className="overflow-x-auto custom-scrollbar">
@@ -381,7 +386,10 @@ export default function DashboardPage() {
                       ) : (
                         <tr>
                           <td className="px-6 py-10 text-center text-gray-300" colSpan={5}>
-                            <div className="font-medium">No results found matching your search.</div>
+                            <div className="font-medium">No documents found.</div>
+                            <div className="text-xs text-gray-300 mt-1">
+                              Upload a file, or switch to <span className="font-semibold">All (Public)</span>.
+                            </div>
                           </td>
                         </tr>
                       )}
@@ -391,7 +399,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="lg:col-span-4 space-y-6">
+            <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-28">
               <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 p-8">
                 <div className="flex items-center gap-2 mb-6 text-orange-primary font-bold text-sm uppercase tracking-widest">
                   <i data-lucide="plus-circle" className="w-5 h-5"></i> Quick Upload
@@ -433,6 +441,7 @@ export default function DashboardPage() {
                         onChange={(e) => setClassification(e.target.value)}
                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:border-orange-200 focus:bg-white focus:outline-none transition-all appearance-none text-sm font-medium"
                       >
+                        <option value="public">Public</option>
                         <option value="internal">Internal Only</option>
                         <option value="confidential">Confidential</option>
                         <option value="restricted">Top Secret / Restricted</option>

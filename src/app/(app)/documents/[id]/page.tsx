@@ -48,6 +48,7 @@ function categoryBadge(category: string) {
 
 function securityBadge(classification: string) {
   const cl = (classification || "internal").toLowerCase();
+  if (cl === "public") return { label: "Public", cls: "bg-blue-50 text-blue-600" };
   if (cl === "confidential") return { label: "Encrypted", cls: "bg-green-50 text-green-600" };
   if (cl === "restricted") return { label: "Restricted", cls: "bg-red-50 text-red-600" };
   return { label: "Internal", cls: "bg-orange-50 text-orange-600" };
@@ -78,8 +79,18 @@ export default function DocumentPage() {
     setError(null);
     try {
       const d = await apiRequest<Doc>(`${API_BASE}/documents/${id}`, { token });
-      const c = await apiRequest<{ comments: Comment[] }>(`${API_BASE}/documents/${id}/comments`, { token });
       setDoc(d);
+
+      const isPublic = String(d.classification || "").toLowerCase() === "public";
+      const isOwner = !!me && d.ownerId === me.id;
+      const canView = isOwner || isPublic;
+
+      if (!canView) {
+        setComments([]);
+        return;
+      }
+
+      const c = await apiRequest<{ comments: Comment[] }>(`${API_BASE}/documents/${id}/comments`, { token });
       setComments(c.comments ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load document");
@@ -102,6 +113,13 @@ export default function DocumentPage() {
   async function onAddComment(e: React.FormEvent) {
     e.preventDefault();
     if (!token) return;
+    if (!doc) return;
+    const isPublic = String(doc.classification || "").toLowerCase() === "public";
+    const isOwner = !!me && doc.ownerId === me.id;
+    if (!(isOwner || isPublic)) {
+      setError("Access denied");
+      return;
+    }
     try {
       await apiRequest(`${API_BASE}/documents/${id}/comments`, {
         method: "POST",
@@ -118,6 +136,12 @@ export default function DocumentPage() {
 
   async function onDelete() {
     if (!token) return;
+    if (!doc) return;
+    const isOwner = !!me && doc.ownerId === me.id;
+    if (!isOwner) {
+      setError("Only the owner can delete this document.");
+      return;
+    }
     try {
       await apiRequest(`${API_BASE}/documents/${id}/delete`, { method: "POST", token });
       router.push("/dashboard");
@@ -128,6 +152,12 @@ export default function DocumentPage() {
 
   async function onDownload() {
     if (!token || !doc) return;
+    const isPublic = String(doc.classification || "").toLowerCase() === "public";
+    const isOwner = !!me && doc.ownerId === me.id;
+    if (!(isOwner || isPublic)) {
+      setError("Access denied");
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE}/documents/${doc.id}/download`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -152,6 +182,12 @@ export default function DocumentPage() {
   const profileInitials = initials(me?.username || me?.email || "user");
 
   const sec = securityBadge(doc?.classification ?? "internal");
+  const canViewDoc =
+    !!doc &&
+    (!!me && doc.ownerId === me.id
+      ? true
+      : String(doc.classification || "").toLowerCase() === "public");
+  const canDeleteDoc = !!doc && !!me && doc.ownerId === me.id;
 
   return (
     <div className="text-gray-900" style={{ backgroundColor: "#F9FAFB", minHeight: "100vh" }}>
@@ -258,7 +294,7 @@ export default function DocumentPage() {
               <button
                 onClick={onDownload}
                 type="button"
-                disabled={!doc}
+                disabled={!doc || !canViewDoc}
                 className="px-5 py-2.5 bg-orange-primary text-white rounded-xl font-semibold shadow-lg shadow-orange-200 hover:shadow-orange-300 transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <i data-lucide="download" className="w-4 h-4"></i> Download
@@ -266,7 +302,7 @@ export default function DocumentPage() {
               <button
                 onClick={onDelete}
                 type="button"
-                disabled={!doc}
+                disabled={!doc || !canDeleteDoc}
                 className="px-5 py-2.5 bg-white border border-red-200 text-red-600 rounded-xl font-semibold shadow-sm hover:bg-red-50 transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <i data-lucide="trash-2" className="w-4 h-4"></i> Delete
@@ -285,6 +321,23 @@ export default function DocumentPage() {
           ) : !doc ? (
             <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 p-10 text-gray-400">
               Document not found.
+            </div>
+          ) : !canViewDoc ? (
+            <div className="bg-white rounded-[2rem] border border-red-100 shadow-xl shadow-gray-200/40 p-10">
+              <div className="text-red-700 font-bold">Access denied</div>
+              <div className="text-sm text-gray-500 mt-2">
+                This document is private. Only the owner can view it unless it’s marked as{" "}
+                <span className="font-semibold">public</span>.
+              </div>
+              <div className="mt-6">
+                <button
+                  onClick={() => router.push("/dashboard")}
+                  type="button"
+                  className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold shadow-sm hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
+                >
+                  <i data-lucide="arrow-left" className="w-4 h-4"></i> Back to workspace
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
