@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { graphqlRequest } from "@/lib/api";
 import { setToken, setUser } from "@/lib/auth";
+import { API_BASE } from "@/lib/config";
 
 type ResetPasswordData = {
   resetPassword: {
@@ -35,6 +36,15 @@ export default function ResetPasswordPage() {
     const w = window as any;
     if (w?.lucide?.createIcons) w.lucide.createIcons();
   }, [lucideLoaded, loading, error, done, tokenHint]);
+
+  useEffect(() => {
+    // Basic telemetry (pageview)
+    try {
+      fetch(`${API_BASE}/telemetry?url=${encodeURIComponent(window.location.href)}`).catch(() => {});
+    } catch {
+      // ignore
+    }
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -108,8 +118,8 @@ export default function ResetPasswordPage() {
                     <i data-lucide="bug" className="w-5 h-5 text-orange-300"></i>
                   </div>
                   <div>
-                    <div className="font-bold">Secure reset</div>
-                    <div className="text-white/70 text-sm">Tokens expire automatically for safety.</div>
+                    <div className="font-bold">Account recovery</div>
+                    <div className="text-white/70 text-sm">Use the link from your email to finish the reset.</div>
                   </div>
                 </div>
               </div>
