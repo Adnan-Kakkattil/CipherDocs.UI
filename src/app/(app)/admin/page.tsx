@@ -53,6 +53,25 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AdminData | null>(null);
 
+  const [creating, setCreating] = useState(false);
+  const [createUsername, setCreateUsername] = useState("");
+  const [createEmail, setCreateEmail] = useState("");
+  const [createPassword, setCreatePassword] = useState("");
+  const [createIsAdmin, setCreateIsAdmin] = useState(false);
+
+  const [userActionId, setUserActionId] = useState<string | null>(null);
+  const [docActionId, setDocActionId] = useState<number | null>(null);
+
+  async function refresh() {
+    const res = await graphqlRequest<AdminData>(`
+      query {
+        users { id username email isAdmin createdAt }
+        documents { id title ownerId filename category classification createdAt }
+      }
+    `);
+    setData(res);
+  }
+
   useEffect(() => {
     if (!token || !me) router.push("/login");
   }, [token, me, router]);
@@ -88,11 +107,87 @@ export default function AdminPage() {
     if (!lucideLoaded) return;
     const w = window as any;
     if (w?.lucide?.createIcons) w.lucide.createIcons();
-  }, [lucideLoaded, loading, error, data?.users?.length, data?.documents?.length]);
+  }, [lucideLoaded, loading, error, data?.users?.length, data?.documents?.length, creating, userActionId, docActionId]);
 
   function onLogout() {
     signOut();
     router.push("/login");
+  }
+
+  async function onCreateUser(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setCreating(true);
+    try {
+      await graphqlRequest<{ adminCreateUser: { id: string } }>(
+        `mutation Create($input:AdminCreateUserInput!){ adminCreateUser(input:$input){ id } }`,
+        {
+          input: {
+            username: createUsername,
+            email: createEmail,
+            password: createPassword,
+            isAdmin: createIsAdmin
+          }
+        }
+      );
+      setCreateUsername("");
+      setCreateEmail("");
+      setCreatePassword("");
+      setCreateIsAdmin(false);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create user");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function toggleAdmin(u: AdminUser) {
+    setError(null);
+    setUserActionId(u.id);
+    try {
+      await graphqlRequest<{ adminSetUserAdmin: { id: string } }>(
+        `mutation SetAdmin($userId:ID!,$isAdmin:Boolean!){ adminSetUserAdmin(userId:$userId,isAdmin:$isAdmin){ id } }`,
+        { userId: u.id, isAdmin: !u.isAdmin }
+      );
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update user");
+    } finally {
+      setUserActionId(null);
+    }
+  }
+
+  async function updateDocClassification(id: number, classification: string) {
+    setError(null);
+    setDocActionId(id);
+    try {
+      await graphqlRequest<{ adminUpdateDocument: { id: number } }>(
+        `mutation UpdateDoc($id:Int!,$classification:String){ adminUpdateDocument(id:$id,classification:$classification){ id } }`,
+        { id, classification }
+      );
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update document");
+    } finally {
+      setDocActionId(null);
+    }
+  }
+
+  async function deleteDoc(id: number) {
+    setError(null);
+    setDocActionId(id);
+    try {
+      await graphqlRequest<{ adminDeleteDocument: { ok: boolean; message: string } }>(
+        `mutation DeleteDoc($id:Int!){ adminDeleteDocument(id:$id){ ok message } }`,
+        { id }
+      );
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete document");
+    } finally {
+      setDocActionId(null);
+    }
   }
 
   if (me && !me.isAdmin) {
@@ -221,6 +316,68 @@ export default function AdminPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             <div className="lg:col-span-6">
+              <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 p-8 mb-8">
+                <div className="flex items-center gap-2 mb-6 text-orange-primary font-bold text-sm uppercase tracking-widest">
+                  <i data-lucide="user-plus" className="w-5 h-5"></i> Create User
+                </div>
+                <form onSubmit={onCreateUser} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2">
+                        Username
+                      </label>
+                      <input
+                        value={createUsername}
+                        onChange={(e) => setCreateUsername(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:border-orange-200 focus:bg-white focus:outline-none transition-all text-sm"
+                        placeholder="new.user"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2">
+                        Email
+                      </label>
+                      <input
+                        value={createEmail}
+                        onChange={(e) => setCreateEmail(e.target.value)}
+                        type="email"
+                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:border-orange-200 focus:bg-white focus:outline-none transition-all text-sm"
+                        placeholder="user@company.com"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2">
+                      Password
+                    </label>
+                    <input
+                      value={createPassword}
+                      onChange={(e) => setCreatePassword(e.target.value)}
+                      type="password"
+                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:border-orange-200 focus:bg-white focus:outline-none transition-all text-sm"
+                      placeholder="Set an initial password"
+                    />
+                  </div>
+                  <label className="flex items-center gap-3 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={createIsAdmin}
+                      onChange={(e) => setCreateIsAdmin(e.target.checked)}
+                      className="w-4 h-4 accent-[#FF6B00]"
+                    />
+                    Create as admin
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={creating || !createUsername || !createEmail || !createPassword}
+                    className="w-full py-4 bg-orange-gradient text-white rounded-2xl font-bold text-lg shadow-xl shadow-orange-100 hover:shadow-orange-200 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <i data-lucide="plus" className="w-5 h-5"></i>
+                    {creating ? "Creating..." : "Create user"}
+                  </button>
+                </form>
+              </div>
+
               <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-hidden">
                 <div className="p-6 border-b border-gray-50 flex justify-between items-center">
                   <h3 className="font-bold text-gray-800 flex items-center gap-2">
@@ -234,9 +391,7 @@ export default function AdminPage() {
                       <tr>
                         <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Username</th>
                         <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">
-                          Role
-                        </th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Role</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -252,9 +407,23 @@ export default function AdminPage() {
                             <td className="px-6 py-5 text-sm font-semibold text-gray-900">{u.username}</td>
                             <td className="px-6 py-5 text-sm text-gray-600">{u.email}</td>
                             <td className="px-6 py-5 text-right">
-                              <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${badgeForRole(u.isAdmin)}`}>
-                                {u.isAdmin ? "Admin" : "User"}
-                              </span>
+                              <div className="inline-flex items-center gap-2">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${badgeForRole(
+                                    u.isAdmin
+                                  )}`}
+                                >
+                                  {u.isAdmin ? "Admin" : "User"}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={userActionId === u.id}
+                                  onClick={() => toggleAdmin(u)}
+                                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                                >
+                                  {userActionId === u.id ? "..." : u.isAdmin ? "Demote" : "Promote"}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -285,9 +454,7 @@ export default function AdminPage() {
                       <tr>
                         <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">ID</th>
                         <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Title</th>
-                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">
-                          Classification
-                        </th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Classification</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -310,9 +477,33 @@ export default function AdminPage() {
                               <div className="text-xs text-gray-400">{d.filename}</div>
                             </td>
                             <td className="px-6 py-5 text-right">
-                              <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${badgeForClassification(d.classification)}`}>
-                                {d.classification}
-                              </span>
+                              <div className="inline-flex items-center gap-2 justify-end">
+                                <select
+                                  value={d.classification}
+                                  disabled={docActionId === d.id}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => updateDocClassification(d.id, e.target.value)}
+                                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-white ${badgeForClassification(
+                                    d.classification
+                                  )}`}
+                                >
+                                  <option value="public">public</option>
+                                  <option value="internal">internal</option>
+                                  <option value="confidential">confidential</option>
+                                  <option value="restricted">restricted</option>
+                                </select>
+                                <button
+                                  type="button"
+                                  disabled={docActionId === d.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteDoc(d.id);
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-white border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-60"
+                                >
+                                  {docActionId === d.id ? "..." : "Delete"}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
