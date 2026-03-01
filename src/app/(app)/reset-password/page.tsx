@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { graphqlRequest } from "@/lib/api";
 import { setToken, setUser } from "@/lib/auth";
@@ -14,7 +14,7 @@ type ResetPasswordData = {
   };
 };
 
-export default function ResetPasswordPage() {
+function ResetPasswordInner() {
   const router = useRouter();
   const search = useSearchParams();
   const prefilledToken = search.get("token") ?? "";
@@ -235,6 +235,22 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 text-gray-900 flex items-center justify-center">
+          <div className="bg-white border border-gray-100 rounded-[2rem] shadow-xl shadow-gray-200/40 p-10 text-gray-400">
+            Loading…
+          </div>
+        </div>
+      }
+    >
+      <ResetPasswordInner />
+    </Suspense>
   );
 }
 
