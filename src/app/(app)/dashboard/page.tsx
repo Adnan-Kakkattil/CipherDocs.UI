@@ -222,6 +222,11 @@ export default function DashboardPage() {
               <a href="#" className="text-orange-primary flex items-center gap-2">
                 <i data-lucide="layout-grid" className="w-4 h-4"></i> Overview
               </a>
+              {me?.isAdmin ? (
+                <Link href="/admin" className="hover:text-orange-primary transition-colors flex items-center gap-2">
+                  <i data-lucide="crown" className="w-4 h-4"></i> Admin
+                </Link>
+              ) : null}
               <a href="#" className="hover:text-orange-primary transition-colors flex items-center gap-2">
                 <i data-lucide="folder" className="w-4 h-4"></i> Projects
               </a>
