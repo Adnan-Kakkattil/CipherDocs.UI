@@ -241,12 +241,13 @@ export default function DashboardPage() {
                 </div>
               </div>
               <button
-                className="p-2 text-gray-400 hover:text-orange-primary transition-colors"
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold shadow-sm hover:bg-gray-50 hover:text-orange-primary transition-colors flex items-center gap-2"
                 onClick={onSignOut}
                 type="button"
-                aria-label="Sign out"
+                aria-label="Logout"
               >
                 <i data-lucide="log-out" className="w-5 h-5"></i>
+                <span className="hidden sm:inline">Logout</span>
               </button>
             </div>
           </div>
