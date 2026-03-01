@@ -1,47 +1,56 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import Script from "next/script";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { graphqlRequest } from "@/lib/api";
 import { setToken, setUser } from "@/lib/auth";
-import Script from "next/script";
-import { useEffect } from "react";
 
-type LoginData = {
-  login: {
+type ResetPasswordData = {
+  resetPassword: {
     token: string;
     user: { id: string; username: string; email: string; isAdmin: boolean };
   };
 };
 
-export default function LoginPage() {
+export default function ResetPasswordPage() {
   const router = useRouter();
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("password");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const search = useSearchParams();
+  const prefilledToken = search.get("token") ?? "";
+
   const [lucideLoaded, setLucideLoaded] = useState(false);
+  const [resetToken, setResetToken] = useState(prefilledToken);
+  const [newPassword, setNewPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const tokenHint = useMemo(() => {
+    if (!resetToken) return "";
+    return resetToken.length > 18 ? `${resetToken.slice(0, 10)}…${resetToken.slice(-6)}` : resetToken;
+  }, [resetToken]);
 
   useEffect(() => {
     if (!lucideLoaded) return;
     const w = window as any;
     if (w?.lucide?.createIcons) w.lucide.createIcons();
-  }, [lucideLoaded]);
+  }, [lucideLoaded, loading, error, done, tokenHint]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      const data = await graphqlRequest<LoginData>(
-        `mutation Login($username:String!,$password:String!){ login(username:$username,password:$password){ token user { id username email isAdmin } } }`,
-        { username, password }
+      const data = await graphqlRequest<ResetPasswordData>(
+        `mutation Reset($resetToken:String!,$newPassword:String!){ resetPassword(resetToken:$resetToken,newPassword:$newPassword){ token user { id username email isAdmin } } }`,
+        { resetToken, newPassword }
       );
-      setToken(data.login.token);
-      setUser(data.login.user);
-      router.push("/dashboard");
+      setToken(data.resetPassword.token);
+      setUser(data.resetPassword.user);
+      setDone(true);
+      setTimeout(() => router.push("/dashboard"), 400);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Reset failed");
     } finally {
       setLoading(false);
     }
@@ -69,70 +78,51 @@ export default function LoginPage() {
 
       <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
         {/* Left visual panel */}
-        <div className="hidden lg:flex relative overflow-hidden bg-orange-gradient">
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute -top-24 -left-24 w-96 h-96 bg-white rounded-full blur-3xl" />
-            <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-black/20 rounded-full blur-3xl" />
+        <div className="hidden lg:flex relative overflow-hidden bg-gray-900">
+          <div className="absolute inset-0 opacity-35">
+            <div className="absolute -top-24 -left-24 w-96 h-96 bg-orange-500/30 rounded-full blur-3xl" />
+            <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-orange-500/20 rounded-full blur-3xl" />
           </div>
-          <div className="relative z-10 p-12 flex flex-col justify-between w-full">
+          <div className="relative z-10 p-12 flex flex-col justify-between w-full text-white">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center ring-1 ring-white/25">
-                <i data-lucide="shield-check" className="w-7 h-7 text-white"></i>
+              <div className="w-12 h-12 bg-orange-gradient rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/20">
+                <i data-lucide="key" className="w-7 h-7 text-white"></i>
               </div>
-              <div className="text-white">
+              <div>
                 <div className="text-2xl font-extrabold tracking-tight">
-                  Cipher<span className="text-white/80">Docs</span>
+                  Cipher<span className="text-orange-primary">Docs</span>
                 </div>
-                <div className="text-white/80 text-sm font-medium">Secure document storage for the future</div>
+                <div className="text-white/70 text-sm font-medium">Complete your reset</div>
               </div>
             </div>
 
             <div className="max-w-xl">
-              <h1 className="text-4xl font-extrabold text-white leading-tight">
-                Welcome back to your workspace.
-              </h1>
-              <p className="mt-4 text-white/85 text-lg leading-relaxed">
-                Upload, manage, and collaborate on documents with a high‑performance GraphQL backend.
+              <h1 className="text-4xl font-extrabold leading-tight">Set a new password.</h1>
+              <p className="mt-4 text-white/75 text-lg leading-relaxed">
+                Provide the reset token and choose a new password. (Lab note: token replay and weak validation are
+                intentional.)
               </p>
 
               <div className="mt-10 grid gap-4">
                 <div className="flex items-start gap-3 text-white/90">
-                  <div className="mt-1 w-9 h-9 rounded-xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
-                    <i data-lucide="zap" className="w-5 h-5 text-white"></i>
+                  <div className="mt-1 w-9 h-9 rounded-xl bg-white/10 ring-1 ring-white/10 flex items-center justify-center">
+                    <i data-lucide="bug" className="w-5 h-5 text-orange-300"></i>
                   </div>
                   <div>
-                    <div className="font-bold">Fast access</div>
-                    <div className="text-white/80 text-sm">Search and open docs in seconds.</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 text-white/90">
-                  <div className="mt-1 w-9 h-9 rounded-xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
-                    <i data-lucide="file-text" className="w-5 h-5 text-white"></i>
-                  </div>
-                  <div>
-                    <div className="font-bold">Document vault</div>
-                    <div className="text-white/80 text-sm">Organize by category and classification.</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 text-white/90">
-                  <div className="mt-1 w-9 h-9 rounded-xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
-                    <i data-lucide="message-square" className="w-5 h-5 text-white"></i>
-                  </div>
-                  <div>
-                    <div className="font-bold">Team comments</div>
-                    <div className="text-white/80 text-sm">Keep review notes next to the file.</div>
+                    <div className="font-bold">ATO exercise</div>
+                    <div className="text-white/70 text-sm">
+                      If you can obtain a victim’s reset token, you can take over the account.
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="text-white/75 text-sm">
-              © {new Date().getFullYear()} CipherDocs
-            </div>
+            <div className="text-white/60 text-sm">© {new Date().getFullYear()} CipherDocs</div>
           </div>
         </div>
 
-        {/* Right login panel */}
+        {/* Right form panel */}
         <div className="flex items-center justify-center px-6 py-14 bg-gray-50">
           <div className="w-full max-w-md">
             <div className="lg:hidden mb-8">
@@ -149,37 +139,38 @@ export default function LoginPage() {
             <div className="bg-white border border-gray-100 rounded-[2rem] shadow-xl shadow-gray-200/40 p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-extrabold text-gray-900">Sign in</h2>
-                  <p className="text-gray-500 mt-1">Access your documents and activity.</p>
+                  <h2 className="text-2xl font-extrabold text-gray-900">New password</h2>
+                  <p className="text-gray-500 mt-1">
+                    Using token: <span className="font-mono">{tokenHint || "—"}</span>
+                  </p>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-primary">
-                  <i data-lucide="log-in" className="w-6 h-6"></i>
+                  <i data-lucide="rotate-cw" className="w-6 h-6"></i>
                 </div>
               </div>
 
               <form onSubmit={onSubmit} className="space-y-4">
                 <div>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2">
-                    Email or username
+                    Reset token
                   </label>
                   <div className="relative">
                     <i
-                      data-lucide="user"
+                      data-lucide="ticket"
                       className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
                     ></i>
                     <input
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      autoComplete="username"
-                      placeholder="admin or admin@cipherdocs.local"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:border-orange-200 focus:bg-white focus:outline-none transition-all text-sm"
+                      value={resetToken}
+                      onChange={(e) => setResetToken(e.target.value)}
+                      placeholder="reset_admin_token_123"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:border-orange-200 focus:bg-white focus:outline-none transition-all text-sm font-mono"
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2">
-                    Password
+                    New password
                   </label>
                   <div className="relative">
                     <i
@@ -187,12 +178,12 @@ export default function LoginPage() {
                       className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
                     ></i>
                     <input
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
                       type="password"
-                      autoComplete="current-password"
+                      autoComplete="new-password"
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:border-orange-200 focus:bg-white focus:outline-none transition-all text-sm"
-                      placeholder="••••••••"
+                      placeholder="Choose a new password"
                     />
                   </div>
                 </div>
@@ -203,28 +194,35 @@ export default function LoginPage() {
                   </div>
                 ) : null}
 
+                {done ? (
+                  <div className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl px-4 py-3">
+                    <div className="font-bold">Password updated</div>
+                    <div className="text-xs mt-1 opacity-80">Signing you in…</div>
+                  </div>
+                ) : null}
+
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !resetToken || !newPassword}
                   className="w-full py-4 bg-orange-gradient text-white rounded-2xl font-bold text-lg shadow-xl shadow-orange-100 hover:shadow-orange-200 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <i data-lucide="shield" className="w-5 h-5"></i>
-                  {loading ? "Signing in..." : "Sign in"}
+                  <i data-lucide="check" className="w-5 h-5"></i>
+                  {loading ? "Updating..." : "Update password"}
                 </button>
 
                 <div className="flex items-center justify-between pt-2 text-sm">
-                  <a href="/forgot-password" className="font-bold text-gray-500 hover:underline">
-                    Forgot password?
+                  <a href="/forgot-password" className="font-bold text-orange-primary hover:underline">
+                    Request a token
                   </a>
-                  <a href="/register" className="font-bold text-orange-primary hover:underline">
-                    Create account
+                  <a href="/login" className="font-bold text-gray-500 hover:underline">
+                    Back to sign in
                   </a>
                 </div>
               </form>
             </div>
 
             <div className="text-xs text-gray-400 mt-6 text-center">
-              Tip: you can sign in using either username or email.
+              Tip: try token <span className="font-mono">reset_admin_token_123</span> after seeding.
             </div>
           </div>
         </div>
