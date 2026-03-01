@@ -9,7 +9,6 @@ type RequestResetData = {
   requestPasswordReset: {
     ok: boolean;
     message: string;
-    resetToken?: string | null;
   };
 };
 
@@ -20,21 +19,14 @@ export default function ForgotPasswordPage() {
   const [identifier, setIdentifier] = useState("admin");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ ok: boolean; message: string; resetToken?: string | null } | null>(
-    null
-  );
-
-  const resetLink = useMemo(() => {
-    const t = result?.resetToken ? String(result.resetToken) : "";
-    if (!t) return "";
-    return `/reset-password?token=${encodeURIComponent(t)}`;
-  }, [result?.resetToken]);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const showSuccess = useMemo(() => !!result?.ok, [result?.ok]);
 
   useEffect(() => {
     if (!lucideLoaded) return;
     const w = window as any;
     if (w?.lucide?.createIcons) w.lucide.createIcons();
-  }, [lucideLoaded, loading, error, result?.resetToken]);
+  }, [lucideLoaded, loading, error, showSuccess]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,7 +35,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     try {
       const data = await graphqlRequest<RequestResetData>(
-        `mutation RequestReset($identifier:String!){ requestPasswordReset(identifier:$identifier){ ok message resetToken } }`,
+        `mutation RequestReset($identifier:String!){ requestPasswordReset(identifier:$identifier){ ok message } }`,
         { identifier }
       );
       setResult(data.requestPasswordReset);
@@ -97,8 +89,7 @@ export default function ForgotPasswordPage() {
             <div className="max-w-xl">
               <h1 className="text-4xl font-extrabold text-white leading-tight">Forgot your password?</h1>
               <p className="mt-4 text-white/85 text-lg leading-relaxed">
-                Enter your email or username to request a reset. (Lab note: this demo returns the reset token
-                directly.)
+                Enter your email or username and we&apos;ll send you a reset link.
               </p>
 
               <div className="mt-10 grid gap-4">
@@ -107,10 +98,8 @@ export default function ForgotPasswordPage() {
                     <i data-lucide="shield-alert" className="w-5 h-5 text-white"></i>
                   </div>
                   <div>
-                    <div className="font-bold">Security training</div>
-                    <div className="text-white/80 text-sm">
-                      This flow is intentionally vulnerable for account takeover exercises.
-                    </div>
+                    <div className="font-bold">Fast recovery</div>
+                    <div className="text-white/80 text-sm">Reset your password in under a minute.</div>
                   </div>
                 </div>
               </div>
@@ -177,24 +166,16 @@ export default function ForgotPasswordPage() {
                       result.ok ? "text-green-700 bg-green-50 border-green-100" : "text-red-700 bg-red-50 border-red-100"
                     }`}
                   >
-                    <div className="font-bold">{result.ok ? "Request created" : "Request failed"}</div>
+                    <div className="font-bold">{result.ok ? "Check your email" : "Request failed"}</div>
                     <div className="mt-1 text-xs opacity-80">{result.message}</div>
-                    {result.resetToken ? (
-                      <div className="mt-3">
-                        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-2">
-                          Reset token (vulnerable)
-                        </div>
-                        <div className="font-mono text-xs break-all bg-white/60 border border-white rounded-lg p-3">
-                          {String(result.resetToken)}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => router.push(resetLink)}
-                          className="mt-3 w-full py-3 bg-white border border-orange-200 text-orange-primary rounded-xl font-bold shadow-sm hover:bg-orange-50 transition-colors flex items-center justify-center gap-2"
-                        >
-                          <i data-lucide="arrow-right" className="w-4 h-4"></i> Continue to reset
-                        </button>
-                      </div>
+                    {result.ok ? (
+                      <button
+                        type="button"
+                        onClick={() => router.push("/login")}
+                        className="mt-3 w-full py-3 bg-white border border-orange-200 text-orange-primary rounded-xl font-bold shadow-sm hover:bg-orange-50 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <i data-lucide="arrow-left" className="w-4 h-4"></i> Back to sign in
+                      </button>
                     ) : null}
                   </div>
                 ) : null}
@@ -220,7 +201,7 @@ export default function ForgotPasswordPage() {
             </div>
 
             <div className="text-xs text-gray-400 mt-6 text-center">
-              Tip: Try requesting a reset for <span className="font-mono">admin</span>.
+              Tip: Use the same identifier you use to sign in.
             </div>
           </div>
         </div>

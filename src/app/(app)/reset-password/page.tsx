@@ -99,8 +99,7 @@ export default function ResetPasswordPage() {
             <div className="max-w-xl">
               <h1 className="text-4xl font-extrabold leading-tight">Set a new password.</h1>
               <p className="mt-4 text-white/75 text-lg leading-relaxed">
-                Provide the reset token and choose a new password. (Lab note: token replay and weak validation are
-                intentional.)
+                Use the token from your email and choose a new password.
               </p>
 
               <div className="mt-10 grid gap-4">
@@ -109,10 +108,8 @@ export default function ResetPasswordPage() {
                     <i data-lucide="bug" className="w-5 h-5 text-orange-300"></i>
                   </div>
                   <div>
-                    <div className="font-bold">ATO exercise</div>
-                    <div className="text-white/70 text-sm">
-                      If you can obtain a victim’s reset token, you can take over the account.
-                    </div>
+                    <div className="font-bold">Secure reset</div>
+                    <div className="text-white/70 text-sm">Tokens expire automatically for safety.</div>
                   </div>
                 </div>
               </div>
@@ -162,7 +159,7 @@ export default function ResetPasswordPage() {
                     <input
                       value={resetToken}
                       onChange={(e) => setResetToken(e.target.value)}
-                      placeholder="reset_admin_token_123"
+                      placeholder="Paste token from email"
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:border-orange-200 focus:bg-white focus:outline-none transition-all text-sm font-mono"
                     />
                   </div>
@@ -222,7 +219,7 @@ export default function ResetPasswordPage() {
             </div>
 
             <div className="text-xs text-gray-400 mt-6 text-center">
-              Tip: try token <span className="font-mono">reset_admin_token_123</span> after seeding.
+              Tip: If you didn&apos;t receive an email, request a new token.
             </div>
           </div>
         </div>
