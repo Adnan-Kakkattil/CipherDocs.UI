@@ -45,6 +45,15 @@ jobs:
           script: |
             set -e
 
+            # Add swap once (helps t2/t3 micro instances)
+            if ! sudo swapon --show | grep -q "/swapfile"; then
+              sudo fallocate -l 2G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=2048
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+              sudo swapon /swapfile
+              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+            fi
+
             # Ensure Node 22
             export NVM_DIR="$HOME/.nvm"
             if [ ! -s "$NVM_DIR/nvm.sh" ]; then
@@ -58,25 +67,23 @@ jobs:
             node -v
             npm -v
 
-            # Ensure PM2
+            # Ensure PM2 under current node
             command -v pm2 >/dev/null 2>&1 || npm install -g pm2
 
             mkdir -p /home/ubuntu/cipherdocs
             cd /home/ubuntu/cipherdocs
 
-            # Keep only .env and new bundle, remove old app files
+            # Keep .env, remove old release content
             find . -mindepth 1 -maxdepth 1 ! -name ".env" ! -name "release.tar.gz" -exec rm -rf {} +
 
             tar -xzf release.tar.gz
             rm -f release.tar.gz
 
-            if [ -f package-lock.json ]; then
-              npm ci
-            else
-              npm install
-            fi
+            # Lighter npm install flags for low-memory servers
+            npm ci --no-audit --no-fund --prefer-offline --progress=false
 
-            npm run build --if-present
+            # Limit node heap during build (prevents OOM)
+            NODE_OPTIONS="--max_old_space_size=768" npm run build --if-present
 
             pm2 describe cipherdocs >/dev/null 2>&1 \
               && pm2 restart cipherdocs --update-env \
