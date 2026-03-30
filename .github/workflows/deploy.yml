@@ -20,14 +20,11 @@ jobs:
           [ -n "${{ secrets.EC2_USER }}" ] || (echo "Missing EC2_USER"; exit 1)
           [ -n "${{ secrets.EC2_SSH_KEY }}" ] || (echo "Missing EC2_SSH_KEY"; exit 1)
 
-      - name: Create deploy bundle (exclude .git)
+      - name: Create deploy bundle
         run: |
-          tar -czf release.tar.gz \
-            --exclude=.git \
-            --exclude=.github \
-            --exclude=node_modules \
-            --exclude=.next \
-            .
+          rm -f release.tar.gz
+          git archive --format=tar.gz -o release.tar.gz HEAD
+          ls -lh release.tar.gz
 
       - name: Upload bundle to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -48,7 +45,7 @@ jobs:
           script: |
             set -e
 
-            # Node 22 (required by your project)
+            # Ensure Node 22
             export NVM_DIR="$HOME/.nvm"
             if [ ! -s "$NVM_DIR/nvm.sh" ]; then
               curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
@@ -61,17 +58,17 @@ jobs:
             node -v
             npm -v
 
+            # Ensure PM2
             command -v pm2 >/dev/null 2>&1 || npm install -g pm2
 
             mkdir -p /home/ubuntu/cipherdocs
             cd /home/ubuntu/cipherdocs
 
-            # Keep only .env, release bundle; remove old app files
+            # Keep only .env and new bundle, remove old app files
             find . -mindepth 1 -maxdepth 1 ! -name ".env" ! -name "release.tar.gz" -exec rm -rf {} +
 
             tar -xzf release.tar.gz
             rm -f release.tar.gz
-            rm -rf .git
 
             if [ -f package-lock.json ]; then
               npm ci
